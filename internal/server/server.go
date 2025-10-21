@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/brutally-Honest/distributed-rate-limiter/internal/config"
+	"github.com/brutally-Honest/distributed-rate-limiter/internal/middlewares"
 )
 
 type Server struct {
@@ -14,17 +15,19 @@ type Server struct {
 
 func New(cfg *config.Config) *Server {
 
-	mux := http.NewServeMux()
-	handlers := NewHandlers(cfg)
+	router := SetUpRoutes(cfg)
+	handlersWithMiddleware := middlewares.Chain(
+		middlewares.Logger(),
+	)(router)
+
 	s := &Server{
 		config: cfg,
 		httpServer: &http.Server{
 			Addr:    ":" + cfg.Server.Port,
-			Handler: mux,
+			Handler: handlersWithMiddleware,
 		},
 	}
-	mux.HandleFunc("/api", handlers.HandleApi)
-	mux.HandleFunc("/health", handlers.HandleHealth)
+
 	return s
 }
 
