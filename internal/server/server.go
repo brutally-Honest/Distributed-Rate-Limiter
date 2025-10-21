@@ -1,10 +1,8 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/brutally-Honest/distributed-rate-limiter/internal/config"
 )
@@ -17,7 +15,7 @@ type Server struct {
 func New(cfg *config.Config) *Server {
 
 	mux := http.NewServeMux()
-
+	handlers := NewHandlers(cfg)
 	s := &Server{
 		config: cfg,
 		httpServer: &http.Server{
@@ -25,34 +23,9 @@ func New(cfg *config.Config) *Server {
 			Handler: mux,
 		},
 	}
-	mux.HandleFunc("/api", s.handleApi)
-	mux.HandleFunc("/health", s.handleHealth)
+	mux.HandleFunc("/api", handlers.HandleApi)
+	mux.HandleFunc("/health", handlers.HandleHealth)
 	return s
-}
-
-type response struct {
-	Msg  string    `json:"msg"`
-	Time time.Time `json:"time"`
-}
-
-func (s *Server) handleApi(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	resp := response{
-		Msg:  "Successfully Hit",
-		Time: time.Now(),
-	}
-	json.NewEncoder(w).Encode(resp)
-}
-
-func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	resp := response{
-		Msg:  fmt.Sprintf("Health ok at %s", s.config.Server.InstanceId),
-		Time: time.Now(),
-	}
-	json.NewEncoder(w).Encode(resp)
 }
 
 func (s *Server) Start() error {
