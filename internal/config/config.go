@@ -1,6 +1,9 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	// "github.com/brutally-Honest/distributed-rate-limiter/internal/redis"
+)
 
 type ServerConfig struct {
 	Port       string
