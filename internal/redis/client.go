@@ -1,62 +1,39 @@
-// package redis
-
-// import (
-//     "os"
-//     "sync"
-//     "github.com/redis/go-redis/v9"
-// )
-
-// var (
-//     client *redis.Client
-//     once   sync.Once
-// )
-
-// func GetClient() *redis.Client {
-//     once.Do(func() {
-//         addr := os.Getenv("REDIS_ADDR")
-//         if addr == "" {
-//             addr = "redis:6379"
-//         }
-//         client = redis.NewClient(&redis.Options{
-//             Addr:     addr,
-//             Password: "",
-//             DB:       0,
-//             PoolSize: 20,
-//         })
-//     })
-//     return client
-// }
-
 package redis
 
 import (
-    "context"
-    "fmt"
-    "time"
+	"context"
+	"fmt"
+	"log"
 
-    "github.com/redis/go-redis/v9"
+	"github.com/redis/go-redis/v9"
 )
 
 type RedisClient struct {
-    client *redis.Client
+	client *redis.Client
 }
 
-func New(addr string) *RedisClient {
-    rdb := redis.NewClient(&redis.Options{
-        Addr:     addr,
-        Password: "",
-        DB:       0,
-        PoolSize: 20,
-    })
-    return &RedisClient{client: rdb}
+func New(addr, password string, db, poolSize int) (*RedisClient, error) {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     addr,
+		Password: password,
+		DB:       db,
+		PoolSize: poolSize,
+	})
+
+	// Test connection
+	if err := rdb.Ping(context.Background()).Err(); err != nil {
+		return nil, fmt.Errorf("redis connection failed: %w", err)
+	}
+	log.Println("Redis client created successfully")
+	return &RedisClient{client: rdb}, nil
 }
 
 // Increment a key with expiration
 func (r *RedisClient) Increment(ctx context.Context, key string) (int64, error) {
-    count, err := r.client.Incr(ctx, key).Result()
-    if err != nil {
-        return 0, err
-    }
+	count, err := r.client.Incr(ctx, key).Result()
+	if err != nil {
+		return 0, err
+	}
 
-    return count, nil
+	return count, nil
 }
