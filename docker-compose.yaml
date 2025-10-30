@@ -1,0 +1,31 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  go:
+    build:
+      context: .
+    environment:
+      - PORT=1783
+      - LIMITER_CAPACITY=20
+      - LIMITER_REFILL_RATE=5
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=""
+      - REDIS_DB=0
+      - REDIS_POOL_SIZE=20
+    depends_on:
+      - redis
+    # container_name: go  # optional
+    # no ports exposed, Nginx will talk internally
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - go

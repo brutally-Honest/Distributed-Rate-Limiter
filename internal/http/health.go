@@ -11,8 +11,9 @@ func (h *Handlers) HandleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	resp := Resp{
-		Msg:  fmt.Sprintf("Health ok at %s", h.cfg.Server.InstanceId),
-		Time: time.Now(),
+		Msg:        fmt.Sprintf("Health ok at %s", h.cfg.Server.InstanceId),
+		Time:       time.Now(),
+		InstanceId: h.cfg.Server.InstanceId,
 	}
 	json.NewEncoder(w).Encode(resp)
 }

@@ -4,15 +4,15 @@ import (
 	"net/http"
 
 	"github.com/brutally-Honest/distributed-rate-limiter/internal/config"
-	"github.com/brutally-Honest/distributed-rate-limiter/internal/handlers"
+	handlers "github.com/brutally-Honest/distributed-rate-limiter/internal/http"
 )
 
 func SetUpRoutes(cfg *config.Config) http.Handler {
 	mux := http.NewServeMux()
-	handlers := handlers.New(cfg)
+	httpHandlers := handlers.New(cfg)
 
-	mux.Handle("/api", http.HandlerFunc(handlers.HandleApi))
-	mux.Handle("/health", http.HandlerFunc(handlers.HandleHealth))
+	mux.Handle("/api", http.HandlerFunc(httpHandlers.HandleApi))
+	mux.Handle("/health", http.HandlerFunc(httpHandlers.HandleHealth))
 
 	return mux
 }

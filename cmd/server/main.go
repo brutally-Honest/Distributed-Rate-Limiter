@@ -16,9 +16,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	s := server.New(cfg)
-	if err := s.Start(); err != nil {
+	server, err := server.New(cfg)
+	if err != nil {
 		log.Printf("Server error %v", err)
+		os.Exit(1)
+	}
+
+	if err := server.Start(); err != nil {
+		log.Printf("Failed to start server: %v", err)
 		os.Exit(1)
 	}
 }
