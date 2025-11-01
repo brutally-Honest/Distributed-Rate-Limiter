@@ -28,6 +28,10 @@ func New(addr, password string, db, poolSize int) (*RedisClient, error) {
 	return &RedisClient{client: rdb}, nil
 }
 
+func (r *RedisClient) GetClient() *redis.Client {
+	return r.client
+}
+
 // Increment a key with expiration
 func (r *RedisClient) Increment(ctx context.Context, key string) (int64, error) {
 	count, err := r.client.Incr(ctx, key).Result()

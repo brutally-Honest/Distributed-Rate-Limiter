@@ -5,16 +5,28 @@ import (
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/brutally-Honest/distributed-rate-limiter/internal/ratelimiter"
 )
 
-type RateLimiterConfig struct {
-}
-
-func RateLimiter() Middleware {
+func NewRateLimiterMiddleware(rl ratelimiter.RateLimiter) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ip := extractIP(r)
-			fmt.Println("ip extracted", ip)
+
+			allowed, remaining, err := rl.CheckLimit(r.Context(), ip)
+			if err != nil {
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+
+			if !allowed {
+				w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
+				http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
+				return
+			}
+
+			w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
 			next.ServeHTTP(w, r)
 		})
 	}

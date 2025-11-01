@@ -10,8 +10,8 @@ type ServerConfig struct {
 }
 
 type LimiterConfig struct {
-	Capacity   int64
-	RefillRate int64
+	Strategy       string
+	StrategyConfig map[string]interface{}
 }
 
 type RedisConfig struct {
@@ -28,14 +28,22 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
+	strategy := getEnvString("LIMITER_STRATEGY", "tokenbucket")
+
+	// this is as per selected strategy
+	strategyConfig := map[string]interface{}{
+		"capacity":   getEnvInt64("LIMITER_CAPACITY", 20),
+		"refillRate": getEnvInt64("LIMITER_REFILL_RATE", 5),
+	}
+
 	cfg := &Config{
 		Server: ServerConfig{
 			Port:       getEnvString("PORT", "1783"),
 			InstanceId: getInstanceId(),
 		},
 		Limiter: LimiterConfig{
-			Capacity:   getEnvInt64("LIMITER_CAPACITY", 20),
-			RefillRate: getEnvInt64("LIMITER_REFILL_RATE", 5),
+			Strategy:       strategy,
+			StrategyConfig: strategyConfig,
 		},
 		Redis: RedisConfig{
 			Addr:     getEnvString("REDIS_ADDR", "localhost:6379"),
@@ -58,13 +66,6 @@ func (cfg *Config) Validate() error {
 	}
 	if cfg.Server.InstanceId == "" {
 		return fmt.Errorf("instanceId cannot be empty")
-	}
-
-	if cfg.Limiter.Capacity <= 0 {
-		return fmt.Errorf("rate limiter capacity must be positive")
-	}
-	if cfg.Limiter.RefillRate <= 0 {
-		return fmt.Errorf("rate limiter refill rate must be positive")
 	}
 
 	if cfg.Redis.Addr == "" {

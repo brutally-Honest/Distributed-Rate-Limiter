@@ -6,6 +6,7 @@ import (
 
 	"github.com/brutally-Honest/distributed-rate-limiter/internal/config"
 	"github.com/brutally-Honest/distributed-rate-limiter/internal/middlewares"
+	"github.com/brutally-Honest/distributed-rate-limiter/internal/ratelimiter"
 	"github.com/brutally-Honest/distributed-rate-limiter/internal/redis"
 )
 
@@ -26,10 +27,15 @@ func New(cfg *config.Config) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Redis client: %v", err)
 	}
+
+	limiter, err := ratelimiter.NewRateLimiter(cfg.Limiter.Strategy, cfg.Limiter.StrategyConfig, redisClient.GetClient())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create rate limiter: %v", err)
+	}
 	router := SetUpRoutes(cfg)
 	handlersWithMiddleware := middlewares.Chain(
 		middlewares.Logger(),
-		middlewares.RateLimiter(),
+		middlewares.NewRateLimiterMiddleware(limiter),
 	)(router)
 
 	s := &Server{
