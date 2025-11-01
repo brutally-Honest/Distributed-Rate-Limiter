@@ -29,6 +29,7 @@ func New(cfg *config.Config) (*Server, error) {
 	router := SetUpRoutes(cfg)
 	handlersWithMiddleware := middlewares.Chain(
 		middlewares.Logger(),
+		middlewares.RateLimiter(),
 	)(router)
 
 	s := &Server{
