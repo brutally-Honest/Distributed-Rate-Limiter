@@ -1,13 +1,13 @@
-package redis
+package tokenbucket
 
 import "fmt"
 
-type TokenBucketConfig struct {
+type TBConfig struct {
 	Capacity   int64 `json:"capacity"`
 	RefillRate int64 `json:"refillRate"`
 }
 
-func (c *TokenBucketConfig) Validate() error {
+func (c *TBConfig) Validate() error {
 	if c.Capacity <= 0 {
 		return fmt.Errorf("token bucket capacity must be positive")
 	}

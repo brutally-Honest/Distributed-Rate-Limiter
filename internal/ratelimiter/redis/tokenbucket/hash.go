@@ -1,4 +1,4 @@
-package redis
+package tokenbucket
 
 import (
 	"context"
@@ -9,14 +9,14 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type TokenBucketSimple struct {
+type TBHash struct {
 	client     *redis.Client
-	config     TokenBucketConfig
+	config     TBConfig
 	instanceId string
 }
 
-func NewTokenBucketSimple(client *redis.Client, cfg TokenBucketConfig, instanceId string) *TokenBucketSimple {
-	return &TokenBucketSimple{
+func NewTBHash(client *redis.Client, cfg TBConfig, instanceId string) *TBHash {
+	return &TBHash{
 		client:     client,
 		config:     cfg,
 		instanceId: instanceId,
@@ -24,7 +24,7 @@ func NewTokenBucketSimple(client *redis.Client, cfg TokenBucketConfig, instanceI
 }
 
 // RACE CONDITION: Multiple requests can read the same value simultaneously
-func (tb *TokenBucketSimple) CheckLimit(ctx context.Context, key string) (bool, int, error) {
+func (tb *TBHash) CheckLimit(ctx context.Context, key string) (bool, int, error) {
 	fullKey := fmt.Sprintf("ratelimit:tb:%s", key)
 
 	// calculation with seconds

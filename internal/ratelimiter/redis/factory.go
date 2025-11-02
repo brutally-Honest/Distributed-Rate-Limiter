@@ -1,14 +1,20 @@
-package ratelimiter
+package redis
 
 import (
 	"encoding/json"
 	"fmt"
 
-	rl "github.com/brutally-Honest/distributed-rate-limiter/internal/ratelimiter/redis"
+	"github.com/brutally-Honest/distributed-rate-limiter/internal/ratelimiter"
+	"github.com/brutally-Honest/distributed-rate-limiter/internal/ratelimiter/redis/tokenbucket"
 	"github.com/redis/go-redis/v9"
 )
 
-func NewRateLimiter(strategy string, strategyConfig map[string]interface{}, client *redis.Client, instanceId string) (RateLimiter, error) {
+func NewRateLimiter(
+	strategy string,
+	strategyConfig map[string]interface{},
+	client *redis.Client,
+	instanceId string) (ratelimiter.RateLimiter, error) {
+
 	defer func() {
 		fmt.Println("Strategy selected: ", strategy)
 		fmt.Println("Strategy config: ", strategyConfig)
@@ -16,7 +22,7 @@ func NewRateLimiter(strategy string, strategyConfig map[string]interface{}, clie
 	switch strategy {
 
 	case "tokenbucket":
-		var cfg rl.TokenBucketConfig
+		var cfg tokenbucket.TBConfig
 		configBytes, _ := json.Marshal(strategyConfig)
 		if err := json.Unmarshal(configBytes, &cfg); err != nil {
 			return nil, fmt.Errorf("invalid token bucket config: %w", err)
@@ -24,7 +30,7 @@ func NewRateLimiter(strategy string, strategyConfig map[string]interface{}, clie
 		if err := cfg.Validate(); err != nil {
 			return nil, err
 		}
-		return rl.NewTokenBucketSimple(client, cfg, instanceId), nil
+		return tokenbucket.NewTBHash(client, cfg, instanceId), nil
 
 	default:
 		return nil, fmt.Errorf("unknown strategy: %s", strategy)

@@ -1,20 +1,19 @@
 # Distributed Rate Limiter 
-(Boiler plate generated //TODO: update later) 
 
-A high-performance, distributed rate limiter built with Go, designed for microservices and API gateways. Implements token bucket algorithm with Redis backend, featuring clean architecture, dependency injection, and comprehensive error handling.
+A distributed rate limiter built with Go and Redis, implementing token bucket algorithm for microservices and API gateways. Features clean architecture, dependency injection, and extensible design for adding new rate limiting strategies.
 
 [![Go Version](https://img.shields.io/badge/go-1.24.5-blue.svg)](https://golang.org)
 
 ## Overview
 
-This project demonstrates production-grade Go development practices while solving distributed rate limiting challenges. The system prevents API abuse through token bucket rate limiting across multiple service instances, with Redis providing the distributed state store.
+This project demonstrates Go development practices for building distributed systems. Currently implements a hash-based token bucket algorithm with Redis for distributed rate limiting across multiple service instances.
 
 **Key Features:**
 - **Distributed**: Scales across multiple instances with Redis coordination
 - **Configurable**: Environment-based configuration with validation
 - **Observable**: Structured logging with instance identification
-- **Performant**: Minimal overhead with efficient Redis operations
-- **Extensible**: Plugin architecture for different rate limiting strategies
+- **Performant**: Hash-based Redis operations for efficient rate limiting
+- **Extensible**: Factory pattern enables easy addition of new rate limiting strategies
 
 ## Architecture
 
@@ -26,10 +25,16 @@ cmd/server/           # Application entry point
 
 internal/
 ├── config/          # Configuration management
-├── server/          # HTTP server setup
+├── server/          # HTTP server setup and routing
 ├── middlewares/     # HTTP middleware chain
 ├── ratelimiter/     # Rate limiting abstractions
+│   ├── limiter.go   # RateLimiter interface
 │   └── redis/       # Redis-based implementations
+│       ├── factory.go      # Rate limiter factory
+│       └── tokenbucket/    # Token bucket implementations
+│           ├── config.go   # Token bucket configuration
+│           ├── hash.go     # Hash-based token bucket
+│           └── README.md   # Implementation details
 ├── redis/           # Redis client wrapper
 └── http/            # HTTP handlers
 ```
@@ -215,7 +220,7 @@ The token bucket algorithm provides smooth rate limiting:
 
 ### Race Condition Analysis
 
-See [`internal/ratelimiter/redis/README.md`](internal/ratelimiter/redis/README.md) for detailed analysis of concurrency issues and evolution toward atomic implementations.
+The current hash-based implementation has known race conditions where multiple instances can read stale token bucket state simultaneously. See [`internal/ratelimiter/redis/tokenbucket/README.md`](internal/ratelimiter/redis/tokenbucket/README.md) for detailed analysis of concurrency issues and planned atomic implementations.
 
 ### IP Extraction Strategy
 
@@ -242,7 +247,6 @@ go vet ./...
 # Build for production
 go build -o bin/server cmd/server/main.go
 ```
-
 ## 🚢 Deployment
 
 ### Docker Production Build
@@ -258,13 +262,6 @@ COPY --from=builder /app/server .
 CMD ["./server"]
 ```
 
-### Kubernetes Deployment
-
-The stateless design makes this perfect for Kubernetes:
-- Horizontal pod autoscaling
-- ConfigMap for environment variables
-- Redis service for state coordination
-
 ## 📈 Performance Benchmarks
 
 **Target Metrics:**
@@ -273,26 +270,26 @@ The stateless design makes this perfect for Kubernetes:
 - Support 10k+ RPS per instance
 
 **Current Implementation:**
-- Redis hash operations: ~0.5ms
-- Token calculation: ~0.1ms
-- Network overhead: ~0.5ms
+- Hash-based token bucket using Redis HSET/HMGET operations
+- Atomic field updates within Redis keys
+- Single network round-trip per rate limit check
 
 ## 📚 Learnings & Patterns
 
 This project demonstrates:
 
-- **Clean Architecture** in Go microservices
-- **Distributed Systems** coordination patterns
-- **Performance Optimization** techniques
-- **Testing Strategies** for concurrent systems
-- **DevOps Integration** with Docker/Kubernetes
+- **Clean Architecture** with proper separation of concerns
+- **Dependency Injection** for testable code
+- **Factory Pattern** for extensible algorithm implementations
+- **Middleware Pattern** for composable HTTP handling
+- **Interface-based Design** for maintainable code
 
 ## 🔗 Related Documentation
 
-- [Redis Implementation Details](internal/ratelimiter/redis/README.md)
-- [Race Condition Analysis](internal/ratelimiter/redis/race_condition_analysis.md)
-- [API Documentation](docs/api.md)
+- [Token Bucket Implementation Details](internal/ratelimiter/redis/tokenbucket/README.md)
+- [Redis Client Documentation](internal/redis/client.go)
 
 ---
 
 **Built with ❤️ and Go best practices**
+
