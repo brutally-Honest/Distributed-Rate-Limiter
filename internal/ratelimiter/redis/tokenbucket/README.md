@@ -2,7 +2,7 @@
 
 This directory contains multiple approaches for implementing token bucket rate limiting in Redis, each with different performance and consistency trade-offs.
 
-## Implementation 1: Hash-based
+## Implementation 1: Redis Hashes
 
 **File**: `hash.go`
 

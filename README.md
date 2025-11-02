@@ -146,8 +146,38 @@ Health check endpoint.
 - [x] **Transaction-based token bucket** - Atomic operations with Redis transactions
 - [x] **Lua script-based token bucket** - Production-ready with best performance
 - [ ] Custom error types with structured error codes
+- [ ] Rate limit statistics logging to database
+- [ ] Code refinements and optimizations
+- [ ] Circuit breaker pattern for Redis resilience
+- [ ] Comprehensive rate limit headers
+- [ ] Redis cluster support
+- [ ] Graceful shutdown implementation
 - [ ] Metrics collection and monitoring
 - [ ] Configuration validation improvements
+
+### Planned Enhancements
+
+**Custom Error Types:**
+- Structured error codes for different failure scenarios
+- Better error classification (configuration, Redis connectivity, rate limiting)
+- Enhanced debugging and monitoring capabilities
+
+**Rate Limit Statistics Logging:**
+- Log successful/failed requests with metadata (IP, user agent, endpoint)
+- Periodic aggregation of rate limit events to database
+- Analytics dashboard for traffic patterns and abuse detection
+
+**Code Refinements:**
+- Performance optimizations in hot paths
+- Memory usage improvements and object pooling
+- Enhanced Redis connection management and health checks
+- Better configuration validation with detailed error messages
+
+**Additional Enhancements:**
+- Circuit breaker pattern for Redis failure resilience
+- Comprehensive rate limit headers (X-RateLimit-Reset, X-RateLimit-Limit)
+- Graceful shutdown with proper cleanup
+- Configuration hot reload without service restart
 
 ## Rate Limiting Strategies
 
