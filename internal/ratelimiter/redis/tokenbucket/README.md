@@ -1,47 +1,35 @@
 # Redis Token Bucket Implementations
 
-Different approaches for implementing token bucket rate limiting in Redis
+This directory contains multiple approaches for implementing token bucket rate limiting in Redis, each with different performance and consistency trade-offs.
 
 ## Implementation 1: Hash-based
 
-**File**: `tokenbucket_simple.go`
-
-### Design Choice: Hashes vs Simple Strings
-
-**Why Redis Hashes (`HSET`/`HMGET`) over `GET`/`SET`:**
-
-**Benefits:**
-- **Atomicity within a key**: Single Redis key stores both `tokens` and `last_refill` fields atomically
-- **Cleaner namespace organization**: One bucket key instead of multiple separate keys
-- **Extensibility**: Easy to add additional bucket metadata without key proliferation  
-- **Performance**: Single network round-trip for reading complete bucket state
-
-**Trade-offs considered:**
-- Slightly higher memory usage per bucket
-- More complex parsing compared to simple float strings
-- But negligible overhead for rate limiting workloads
-
-### Observations
-**Problems:**
-- **Race conditions:** Multiple distributed instances can simultaneously read the same token bucket state, leading to inconsistent rate limiting behavior which increases with higher concurrency and load.
-- **Token over-allocation:** Allows more requests than the configured rate limit permits.
-
-**Vulnerability Points:**
-- **Read Operation**: `HMGET` retrieves bucket state (non-atomic with subsequent operations)
-- **Processing Gap**: Time between reading state and writing updates allows other instances to read stale data
-- **Concurrent Refill Calculations**: Multiple instances may add tokens based on the same `last_refill` timestamp
-
-
-## Implementation 2: Redis Transactions (Planned)
-
-<!-- **File**: `tokenbucket_transaction.go`
+**File**: `hash.go`
 
 ### Approach
-- Uses Redis `WATCH`/`MULTI`/`EXEC` commands for optimistic locking
-- Ensures atomic read-modify-write operations through transactions
-- Automatic retry logic on transaction conflicts
+Uses Redis hash data structures (`HSET`/`HMGET`) for storing token bucket state. Reads current tokens and last refill timestamp, calculates token refill, updates both values in separate operations. Prefers hashes over simple strings for better organization and extensibility.
 
-### Expected Benefits
+### Benefits
+- Simple implementation with minimal code complexity
+- Single network round-trip for reading bucket state
+- Clean namespace organization with structured data
+- Easy to extend with additional metadata fields
+
+### Trade-offs
+- **Race conditions**: Multiple instances can read stale state simultaneously, allowing over-limit requests under high concurrency
+- **Inconsistent behavior**: Token over-allocation increases with load and distributed instances
+- **Non-atomic operations**: Read and write happen separately, creating race condition windows
+- **Eventual consistency**: Behavior degrades under concurrent access
+
+
+## Implementation 2: Redis Transactions
+
+**File**: `transaction.go`
+
+### Approach
+Uses Redis `WATCH`/`MULTI`/`EXEC` commands for optimistic locking to ensure atomic read-modify-write operations through transactions with automatic retry logic on transaction conflicts.
+
+### Benefits
 - Eliminates race conditions through transactional atomicity
 - Maintains hash-based storage advantages
 - No changes to data structure or API
@@ -49,18 +37,16 @@ Different approaches for implementing token bucket rate limiting in Redis
 ### Trade-offs
 - Higher latency due to potential transaction retries
 - More complex error handling for failed transactions
-- Increased Redis command overhead -->
+- Increased Redis command overhead
 
-## Implementation 3: Lua Scripts (Planned)
+## Implementation 3: Lua Script
 
-<!-- **File**: `tokenbucket_lua.go`
+**File**: `lua.go`
 
 ### Approach
-- Server-side Lua scripts execute atomically in Redis
-- Single round-trip for complete rate limit check and update cycle
-- Script handles all logic: token calculation, refill, consumption
+Server-side Lua script execute atomically in Redis with single round-trip for complete rate limit check and update cycle. Script handles all logic: token calculation, refill, consumption.
 
-### Expected Benefits
+### Benefits
 - Zero race conditions - atomic execution guaranteed
 - Best performance with minimal network overhead
 - Consistent behavior across all distributed instances
@@ -72,36 +58,19 @@ Different approaches for implementing token bucket rate limiting in Redis
 
 ## Implementation Comparison
 
-| Aspect | Simple Hash | Transactions | Lua Scripts |
-|--------|-------------|--------------|-------------|
-| Race Conditions | Present | Eliminated | Eliminated |
-| Performance | Highest | Good | Good |
+| Aspect | Hash-based | Transactions | Lua Script |
+|--------|------------|--------------|-------------|
+| Race Conditions | ⚠️ Present | ✅ Eliminated | ✅ Eliminated |
+| Performance | Highest | Good | Best |
 | Complexity | Low | Medium | High |
 | Redis Load | Low | Medium | Medium |
 | Consistency | Eventual | Strong | Strong |
 | Network Round-trips | 2 | 3+ (with retries) | 1 |
 
-## Usage Guidelines
+## Current Status
 
-**Choose Implementation 1 (Simple)** when:
-- Low to medium concurrency
-- Performance is critical
-- Some over-limit requests are acceptable
-- Simplicity outweighs perfect accuracy
+All three implementations are **fully functional**:
 
-**Choose Implementation 2 (Transactions)** when:
-- High concurrency with moderate consistency requirements
-- Need stronger guarantees than simple approach
-- Can tolerate occasional transaction retry latency
-
-**Choose Implementation 3 (Lua Scripts)** when:
-- Maximum consistency and accuracy required
-- High concurrency with zero tolerance for race conditions
-- Performance and atomicity are both critical requirements
-
-## Future Considerations
-
-- Benchmark all implementations under various load patterns
-- Consider Redis Cluster deployment implications
-- Evaluate memory usage patterns across implementations
-- Monitor for Redis command overhead differences -->
+- ✅ **Hash-based** (`hash.go`) - Basic implementation with race conditions
+- ✅ **Transaction-based** (`transaction.go`) - Atomic with retry logic
+- ✅ **Lua-based** (`lua.go`) - Production-ready, recommended for most use cases
