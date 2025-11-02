@@ -46,6 +46,17 @@ func NewRateLimiter(
 			maxRetries = int(retries)
 		}
 		return tokenbucket.NewTBTransaction(client, cfg, maxRetries), nil
+
+	case "tokenbucket-lua":
+		var cfg tokenbucket.TBConfig
+		configBytes, _ := json.Marshal(strategyConfig)
+		if err := json.Unmarshal(configBytes, &cfg); err != nil {
+			return nil, fmt.Errorf("invalid token bucket config: %w", err)
+		}
+		if err := cfg.Validate(); err != nil {
+			return nil, err
+		}
+		return tokenbucket.NewTBLua(client, cfg), nil
 	default:
 		return nil, fmt.Errorf("unknown strategy: %s", strategy)
 	}

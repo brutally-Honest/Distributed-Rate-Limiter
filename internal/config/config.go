@@ -28,7 +28,7 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-	strategy := getEnvString("LIMITER_STRATEGY", "tokenbucket-transaction")
+	strategy := getEnvString("LIMITER_STRATEGY", "tokenbucket-lua")
 
 	// this is as per selected strategy
 	strategyConfig := map[string]interface{}{
