@@ -28,7 +28,7 @@ func New(cfg *config.Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to create Redis client: %v", err)
 	}
 
-	limiter, err := ratelimiter.NewRateLimiter(cfg.Limiter.Strategy, cfg.Limiter.StrategyConfig, redisClient.GetClient())
+	limiter, err := ratelimiter.NewRateLimiter(cfg.Limiter.Strategy, cfg.Limiter.StrategyConfig, redisClient.GetClient(), cfg.Server.InstanceId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create rate limiter: %v", err)
 	}

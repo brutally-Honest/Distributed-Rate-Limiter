@@ -9,74 +9,77 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// TokenBucketNaive implements RateLimiter using separate Redis commands
-// WARNING: This has race conditions under concurrent load
 type TokenBucketSimple struct {
-	client *redis.Client
-	config TokenBucketConfig
+	client     *redis.Client
+	config     TokenBucketConfig
+	instanceId string
 }
 
-func NewTokenBucketSimple(client *redis.Client, cfg TokenBucketConfig) *TokenBucketSimple {
+func NewTokenBucketSimple(client *redis.Client, cfg TokenBucketConfig, instanceId string) *TokenBucketSimple {
 	return &TokenBucketSimple{
-		client: client,
-		config: cfg,
+		client:     client,
+		config:     cfg,
+		instanceId: instanceId,
 	}
 }
 
-// CheckLimit checks if the request should be allowed
 // RACE CONDITION: Multiple requests can read the same value simultaneously
-// remaining represents tokens left in the bucket
 func (tb *TokenBucketSimple) CheckLimit(ctx context.Context, key string) (bool, int, error) {
 	fullKey := fmt.Sprintf("ratelimit:tb:%s", key)
-	now := time.Now().Unix()
+
+	// calculation with seconds
+	nowSeconds := time.Now().Unix()
+
+	// precise logging with nanoseconds
+	nowNano := time.Now().UnixNano()
 
 	// RACE: Read current state
 	bucket, err := tb.client.HMGet(ctx, fullKey, "tokens", "last_refill").Result()
+	fmt.Printf("[%s][%d ns] Checking Redis bucket: %v\n", tb.instanceId, nowNano, bucket)
 	if err != nil && err != redis.Nil {
 		return false, 0, fmt.Errorf("redis hmget failed: %w", err)
 	}
-
 	var currentTokens float64
-	var lastRefill int64
+	var lastRefillSeconds int64
 
-	// Initialize if doesn't exist
 	if bucket[0] == nil {
 		currentTokens = float64(tb.config.Capacity)
-		lastRefill = now
+		lastRefillSeconds = nowSeconds
 	} else {
 		currentTokens, err = strconv.ParseFloat(bucket[0].(string), 64)
 		if err != nil {
 			return false, 0, fmt.Errorf("failed to parse tokens: %w", err)
 		}
-		lastRefill, err = strconv.ParseInt(bucket[1].(string), 10, 64)
+		lastRefillSeconds, err = strconv.ParseInt(bucket[1].(string), 10, 64)
 		if err != nil {
 			return false, 0, fmt.Errorf("failed to parse last_refill: %w", err)
 		}
 	}
 
-	// Calculate refill
-	elapsed := now - lastRefill
-	tokensToAdd := float64(elapsed) * float64(tb.config.RefillRate)
+	elapsedSeconds := nowSeconds - lastRefillSeconds
+	tokensToAdd := float64(elapsedSeconds) * float64(tb.config.RefillRate)
 	currentTokens = min(float64(tb.config.Capacity), currentTokens+tokensToAdd)
-
+	fmt.Printf("[%s][%d ns] Calculated: elapsed=%ds, tokensToAdd=%.2f, currentTokens=%.2f\n",
+		tb.instanceId,
+		time.Now().UnixNano(), elapsedSeconds, tokensToAdd, currentTokens)
 	allowed := currentTokens >= 1.0
 	if allowed {
 		currentTokens -= 1.0
 	}
-
-	// RACE: Write new state (another request may have modified between GET and SET)
-	err = tb.client.HMSet(ctx, fullKey,
+	// RACE: Write new state
+	err = tb.client.HSet(ctx, fullKey,
 		"tokens", fmt.Sprintf("%.2f", currentTokens),
-		"last_refill", now,
+		"last_refill", nowSeconds,
 	).Err()
 
+	fmt.Printf("[%s][%d ns] Setting Redis bucket: %.2f (allowed=%v)\n",
+		tb.instanceId,
+		time.Now().UnixNano(), currentTokens, allowed)
+
 	if err != nil {
-		return false, 0, fmt.Errorf("redis hmset failed: %w", err)
+		return false, 0, fmt.Errorf("redis hset failed: %w", err)
 	}
-
-	// Set expiration
 	tb.client.Expire(ctx, fullKey, time.Hour)
-
 	return allowed, int(currentTokens), nil
 }
 

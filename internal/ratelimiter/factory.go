@@ -8,7 +8,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func NewRateLimiter(strategy string, strategyConfig map[string]interface{}, client *redis.Client) (RateLimiter, error) {
+func NewRateLimiter(strategy string, strategyConfig map[string]interface{}, client *redis.Client, instanceId string) (RateLimiter, error) {
 	defer func() {
 		fmt.Println("Strategy selected: ", strategy)
 		fmt.Println("Strategy config: ", strategyConfig)
@@ -24,7 +24,7 @@ func NewRateLimiter(strategy string, strategyConfig map[string]interface{}, clie
 		if err := cfg.Validate(); err != nil {
 			return nil, err
 		}
-		return rl.NewTokenBucketSimple(client, cfg), nil
+		return rl.NewTokenBucketSimple(client, cfg, instanceId), nil
 
 	default:
 		return nil, fmt.Errorf("unknown strategy: %s", strategy)
