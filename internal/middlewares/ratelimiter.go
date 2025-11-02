@@ -16,6 +16,7 @@ func NewRateLimiterMiddleware(rl ratelimiter.RateLimiter) Middleware {
 
 			allowed, remaining, err := rl.CheckLimit(r.Context(), ip)
 			if err != nil {
+				fmt.Printf("Error checking limit: %v\n", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}

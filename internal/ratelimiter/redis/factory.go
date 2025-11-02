@@ -21,7 +21,7 @@ func NewRateLimiter(
 	}()
 	switch strategy {
 
-	case "tokenbucket":
+	case "tokenbucket-hash":
 		var cfg tokenbucket.TBConfig
 		configBytes, _ := json.Marshal(strategyConfig)
 		if err := json.Unmarshal(configBytes, &cfg); err != nil {
@@ -32,6 +32,20 @@ func NewRateLimiter(
 		}
 		return tokenbucket.NewTBHash(client, cfg, instanceId), nil
 
+	case "tokenbucket-transaction":
+		var cfg tokenbucket.TBConfig
+		configBytes, _ := json.Marshal(strategyConfig)
+		if err := json.Unmarshal(configBytes, &cfg); err != nil {
+			return nil, fmt.Errorf("invalid token bucket config: %w", err)
+		}
+		if err := cfg.Validate(); err != nil {
+			return nil, err
+		}
+		maxRetries := 3
+		if retries, ok := strategyConfig["maxRetries"].(float64); ok {
+			maxRetries = int(retries)
+		}
+		return tokenbucket.NewTBTransaction(client, cfg, maxRetries), nil
 	default:
 		return nil, fmt.Errorf("unknown strategy: %s", strategy)
 	}

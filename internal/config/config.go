@@ -28,12 +28,13 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-	strategy := getEnvString("LIMITER_STRATEGY", "tokenbucket")
+	strategy := getEnvString("LIMITER_STRATEGY", "tokenbucket-transaction")
 
 	// this is as per selected strategy
 	strategyConfig := map[string]interface{}{
 		"capacity":   getEnvInt64("LIMITER_CAPACITY", 20),
 		"refillRate": getEnvInt64("LIMITER_REFILL_RATE", 5),
+		"maxRetries": getEnvInt("MAX_RETRIES", 10),
 	}
 
 	cfg := &Config{
