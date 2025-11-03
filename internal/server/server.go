@@ -80,6 +80,6 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		return err
 	}
 
-	log.Println("Server shutdown complete")
+	log.Printf("Server %s shutdown complete", s.config.Server.InstanceId)
 	return nil
 }

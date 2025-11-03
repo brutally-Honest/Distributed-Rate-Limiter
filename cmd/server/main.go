@@ -26,5 +26,4 @@ func main() {
 		log.Fatalf("Server error: %v", err)
 	}
 
-	log.Println("Server exited cleanly")
 }

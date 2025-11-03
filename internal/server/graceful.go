@@ -15,7 +15,6 @@ func RunWithGracefulShutdown(srv *Server) error {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("Server starting on port %s", srv.config.Server.Port)
 		if err := srv.Start(); err != nil && err != http.ErrServerClosed {
 			log.Printf("Server error: %v", err)
 			os.Exit(1)
@@ -34,6 +33,5 @@ func RunWithGracefulShutdown(srv *Server) error {
 		return err
 	}
 
-	log.Println("Server exited cleanly")
 	return nil
 }
