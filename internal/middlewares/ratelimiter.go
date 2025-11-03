@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -16,7 +17,7 @@ func NewRateLimiterMiddleware(rl ratelimiter.RateLimiter) Middleware {
 
 			allowed, remaining, err := rl.CheckLimit(r.Context(), ip)
 			if err != nil {
-				fmt.Printf("Error checking limit: %v\n", err)
+				log.Printf("Error checking limit: %v\n", err)
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
@@ -35,11 +36,8 @@ func NewRateLimiterMiddleware(rl ratelimiter.RateLimiter) Middleware {
 
 func extractIP(r *http.Request) string {
 	xff := r.Header.Get("X-Forwarded-For")
-	fmt.Println("remote addr", r.RemoteAddr)
-	fmt.Println("xff", xff)
 	if xff != "" {
 		ips := strings.Split(xff, ",")
-		fmt.Println("ips", ips)
 		if len(ips) > 0 {
 			return strings.TrimSpace(ips[0])
 		}

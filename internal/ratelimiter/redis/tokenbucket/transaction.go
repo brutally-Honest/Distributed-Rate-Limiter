@@ -3,6 +3,7 @@ package tokenbucket
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -83,6 +84,6 @@ func (tb *TBTransaction) CheckLimit(ctx context.Context, key string) (bool, int,
 		}
 		return false, 0, fmt.Errorf("redis transaction failed: %w", err)
 	}
-	fmt.Printf("Max retries exceeded for key: %s\n", fullKey)
+	log.Printf("Max retries exceeded for key: %s\n", fullKey)
 	return false, 0, nil
 }

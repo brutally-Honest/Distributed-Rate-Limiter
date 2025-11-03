@@ -150,10 +150,10 @@ Health check endpoint.
 - [ ] Code refinements and optimizations
 - [ ] Circuit breaker pattern for Redis resilience
 - [ ] Comprehensive rate limit headers
-- [ ] Redis cluster support
 - [x] **Graceful shutdown implementation** - Close connections and shut down cleanly
 - [ ] Metrics collection and monitoring
 - [ ] Configuration validation improvements
+- [ ] Hot Reloading
 
 ### Planned Enhancements
 

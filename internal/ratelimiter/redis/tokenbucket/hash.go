@@ -3,6 +3,7 @@ package tokenbucket
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -35,7 +36,7 @@ func (tb *TBHash) CheckLimit(ctx context.Context, key string) (bool, int, error)
 
 	// RACE: Read current state
 	bucket, err := tb.client.HMGet(ctx, fullKey, "tokens", "last_refill").Result()
-	fmt.Printf("[%s][%d ns] Checking Redis bucket: %v\n", tb.instanceId, nowNano, bucket)
+	log.Printf("[%s][%d ns] Checking Redis bucket: %v\n", tb.instanceId, nowNano, bucket)
 	if err != nil && err != redis.Nil {
 		return false, 0, fmt.Errorf("redis hmget failed: %w", err)
 	}
@@ -59,7 +60,7 @@ func (tb *TBHash) CheckLimit(ctx context.Context, key string) (bool, int, error)
 	elapsedSeconds := nowSeconds - lastRefillSeconds
 	tokensToAdd := float64(elapsedSeconds) * float64(tb.config.RefillRate)
 	currentTokens = min(float64(tb.config.Capacity), currentTokens+tokensToAdd)
-	fmt.Printf("[%s][%d ns] Calculated: elapsed=%ds, tokensToAdd=%.2f, currentTokens=%.2f\n",
+	log.Printf("[%s][%d ns] Calculated: elapsed=%ds, tokensToAdd=%.2f, currentTokens=%.2f\n",
 		tb.instanceId,
 		time.Now().UnixNano(), elapsedSeconds, tokensToAdd, currentTokens)
 	allowed := currentTokens >= 1.0
@@ -72,7 +73,7 @@ func (tb *TBHash) CheckLimit(ctx context.Context, key string) (bool, int, error)
 		"last_refill", nowSeconds,
 	).Err()
 
-	fmt.Printf("[%s][%d ns] Setting Redis bucket: %.2f (allowed=%v)\n",
+	log.Printf("[%s][%d ns] Setting Redis bucket: %.2f (allowed=%v)\n",
 		tb.instanceId,
 		time.Now().UnixNano(), currentTokens, allowed)
 

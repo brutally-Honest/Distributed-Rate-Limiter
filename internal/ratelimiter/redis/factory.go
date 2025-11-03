@@ -3,6 +3,7 @@ package redis
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/brutally-Honest/distributed-rate-limiter/internal/ratelimiter"
 	"github.com/brutally-Honest/distributed-rate-limiter/internal/ratelimiter/redis/tokenbucket"
@@ -16,8 +17,8 @@ func NewRateLimiter(
 	instanceId string) (ratelimiter.RateLimiter, error) {
 
 	defer func() {
-		fmt.Println("Strategy selected: ", strategy)
-		fmt.Println("Strategy config: ", strategyConfig)
+		log.Println("Strategy selected: ", strategy)
+		log.Println("Strategy config: ", strategyConfig)
 	}()
 	switch strategy {
 

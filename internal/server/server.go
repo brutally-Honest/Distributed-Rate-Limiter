@@ -28,7 +28,7 @@ func New(cfg *config.Config) (*Server, error) {
 		cfg.Redis.PoolSize,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Redis client: %v", err)
+		return nil, fmt.Errorf("failed to create Redis client: %w", err)
 	}
 
 	limiter, err := redis_ratelimiter.NewRateLimiter(
@@ -38,7 +38,7 @@ func New(cfg *config.Config) (*Server, error) {
 		cfg.Server.InstanceId,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create rate limiter: %v", err)
+		return nil, fmt.Errorf("failed to create rate limiter: %w", err)
 	}
 	router := SetUpRoutes(cfg)
 	handlersWithMiddleware := middlewares.Chain(
@@ -59,7 +59,7 @@ func New(cfg *config.Config) (*Server, error) {
 }
 
 func (s *Server) Start() error {
-	fmt.Println("Server running on port", s.config.Server.Port)
+	log.Println("Server running on port", s.config.Server.Port)
 	return s.httpServer.ListenAndServe()
 }
 
