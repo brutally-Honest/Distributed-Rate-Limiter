@@ -31,3 +31,7 @@ func New(addr, password string, db, poolSize int) (*RedisClient, error) {
 func (r *RedisClient) GetClient() *redis.Client {
 	return r.client
 }
+
+func (r *RedisClient) Close() error {
+	return r.client.Close()
+}

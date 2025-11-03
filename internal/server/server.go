@@ -1,8 +1,11 @@
 package server
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/brutally-Honest/distributed-rate-limiter/internal/config"
 	"github.com/brutally-Honest/distributed-rate-limiter/internal/middlewares"
@@ -58,4 +61,25 @@ func New(cfg *config.Config) (*Server, error) {
 func (s *Server) Start() error {
 	fmt.Println("Server running on port", s.config.Server.Port)
 	return s.httpServer.ListenAndServe()
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	log.Println("Preparing to shutdown server...")
+
+	// TODO: Make this configurable
+	shutdownCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+
+	if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
+		log.Printf("HTTP server shutdown error: %v", err)
+		return err
+	}
+
+	if err := s.redisClient.Close(); err != nil {
+		log.Printf("Redis client shutdown error: %v", err)
+		return err
+	}
+
+	log.Println("Server shutdown complete")
+	return nil
 }

@@ -12,18 +12,19 @@ func main() {
 
 	cfg, err := config.Load()
 	if err != nil {
-		log.Printf("App error %v", err)
+		log.Fatalf("App error %v", err)
 		os.Exit(1)
 	}
 
-	server, err := server.New(cfg)
+	srv, err := server.New(cfg)
 	if err != nil {
-		log.Printf("Server error %v", err)
+		log.Fatalf("Server error %v", err)
 		os.Exit(1)
 	}
 
-	if err := server.Start(); err != nil {
-		log.Printf("Failed to start server: %v", err)
-		os.Exit(1)
+	if err := server.RunWithGracefulShutdown(srv); err != nil {
+		log.Fatalf("Server error: %v", err)
 	}
+
+	log.Println("Server exited cleanly")
 }
