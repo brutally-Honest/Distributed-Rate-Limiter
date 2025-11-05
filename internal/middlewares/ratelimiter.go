@@ -22,13 +22,13 @@ func NewRateLimiterMiddleware(rl ratelimiter.RateLimiter) Middleware {
 				return
 			}
 
+			w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
+
 			if !allowed {
-				w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
 				http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
 				return
 			}
 
-			w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
 			next.ServeHTTP(w, r)
 		})
 	}

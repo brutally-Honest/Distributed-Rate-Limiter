@@ -1,7 +1,6 @@
 package redis
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 
@@ -20,42 +19,46 @@ func NewRateLimiter(
 		log.Printf("Rate limiter initialized | strategy=%s | config=%+v", strategy, strategyConfig)
 	}()
 
-	var cfg tokenbucket.TBConfig
-
 	switch strategy {
-	case "tokenbucket-hash":
-		if err := decodeConfig(strategyConfig, &cfg); err != nil {
+	case "tokenbucket-hash", "tokenbucket-transaction", "tokenbucket-lua":
+		var cfg tokenbucket.TBConfig
+		if err := decodeTBConfig(strategyConfig, &cfg); err != nil {
 			return nil, err
 		}
-		return tokenbucket.NewTBHash(client, cfg, instanceId), nil
 
-	case "tokenbucket-transaction":
-		if err := decodeConfig(strategyConfig, &cfg); err != nil {
-			return nil, err
-		}
-		maxRetries := 3
-		if retries, ok := strategyConfig["maxRetries"].(float64); ok {
-			maxRetries = int(retries)
-		}
-		return tokenbucket.NewTBTransaction(client, cfg, maxRetries), nil
+		switch strategy {
+		case "tokenbucket-hash":
+			return tokenbucket.NewTBHash(client, cfg, instanceId), nil
 
-	case "tokenbucket-lua":
-		if err := decodeConfig(strategyConfig, &cfg); err != nil {
-			return nil, err
+		case "tokenbucket-transaction":
+			maxRetries := 3
+			if retries, ok := strategyConfig["maxRetries"].(int); ok {
+				maxRetries = retries
+			}
+			return tokenbucket.NewTBTransaction(client, cfg, maxRetries), nil
+
+		case "tokenbucket-lua":
+			return tokenbucket.NewTBLua(client, cfg), nil
+
+		default:
+			return nil, fmt.Errorf("unknown strategy: %s", strategy)
 		}
-		return tokenbucket.NewTBLua(client, cfg), nil
-	default:
-		return nil, fmt.Errorf("unknown strategy: %s", strategy)
 	}
+	return nil, fmt.Errorf("unknown strategy: %s", strategy)
 }
 
-func decodeConfig(strategyConfig map[string]interface{}, cfg *tokenbucket.TBConfig) error {
-	configBytes, err := json.Marshal(strategyConfig)
-	if err != nil {
-		return fmt.Errorf("failed to marshal strategy config: %w", err)
+func decodeTBConfig(strategyConfig map[string]interface{}, cfg *tokenbucket.TBConfig) error {
+	capacity, ok := strategyConfig["capacity"].(int64)
+	if !ok {
+		return fmt.Errorf("capacity must be int64, got %T", strategyConfig["capacity"])
 	}
-	if err := json.Unmarshal(configBytes, cfg); err != nil {
-		return fmt.Errorf("invalid token bucket config: %w", err)
+	cfg.Capacity = capacity
+
+	refillRate, ok := strategyConfig["refillRate"].(int64)
+	if !ok {
+		return fmt.Errorf("refillRate must be int64, got %T", strategyConfig["refillRate"])
 	}
+	cfg.RefillRate = refillRate
+
 	return cfg.Validate()
 }
