@@ -16,7 +16,7 @@ func NewRateLimiter(
 	instanceId string) (ratelimiter.RateLimiter, error) {
 
 	defer func() {
-		log.Printf("Rate limiter initialized | strategy=%s | config=%+v", strategy, strategyConfig)
+		log.Printf("Rate limiter initialized\n strategy=%s\n config=%v\n", strategy, strategyConfig)
 	}()
 
 	switch strategy {
