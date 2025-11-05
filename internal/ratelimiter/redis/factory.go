@@ -41,10 +41,13 @@ func NewRateLimiter(
 			return tokenbucket.NewTBLua(client, cfg), nil
 
 		default:
-			return nil, fmt.Errorf("unknown strategy: %s", strategy)
+			return nil, fmt.Errorf("unknown token bucket strategy: %s", strategy)
 		}
+
+	default:
+		return nil, fmt.Errorf("unknown rate limiter strategy: %s", strategy)
 	}
-	return nil, fmt.Errorf("unknown strategy: %s", strategy)
+
 }
 
 func decodeTBConfig(strategyConfig map[string]interface{}, cfg *tokenbucket.TBConfig) error {
