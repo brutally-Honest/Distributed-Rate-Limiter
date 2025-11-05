@@ -40,10 +40,12 @@ func New(cfg *config.Config) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create rate limiter: %w", err)
 	}
-	router := SetUpRoutes(cfg)
+
+	limiterMiddleware := middlewares.NewRateLimiterMiddleware(limiter)
+	router := SetUpRoutes(cfg, limiterMiddleware)
+
 	handlersWithMiddleware := middlewares.Chain(
 		middlewares.Logger(),
-		middlewares.NewRateLimiterMiddleware(limiter),
 	)(router)
 
 	s := &Server{
