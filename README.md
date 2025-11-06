@@ -24,48 +24,52 @@ When running multiple instances of a service, each instance needs to share rate 
 
 ```mermaid
 flowchart TB
-    subgraph clients["Multiple Clients"]
-        C1["Client A<br/>192.168.1.100"]
-        C2["Client B<br/>192.168.1.101"]
-        C3["Client A<br/>192.168.1.100"]
-    end
-
-    subgraph lb["Load Balancer"]
-        LB[Distribution Layer]
-    end
-
-    subgraph instances["Service Instances"]
-        I1["Instance 1<br/>Port 8080"]
-        I2["Instance 2<br/>Port 8081"]
-        I3["Instance 3<br/>Port 8082"]
-    end
-
-    subgraph redis["Redis - Shared State"]
-        RD["Token Buckets"]
-        K1["ratelimit:192.168.1.100<br/>tokens: 95, last_refill: 1699123456"]
-        K2["ratelimit:192.168.1.101<br/>tokens: 100, last_refill: 1699123450"]
-
-        RD --- K1
-        RD --- K2
-    end
-
-    C1 --> LB
-    C2 --> LB
-    C3 --> LB
-
-    LB --> I1
-    LB --> I2
-    LB --> I3
-
-    I1 <-->|Read/Write| RD
-    I2 <-->|Read/Write| RD
-    I3 <-->|Read/Write| RD
-
-    style clients fill:#f5f5f5,stroke:#666,stroke-width:2px
-    style lb fill:#e8e8e8,stroke:#666,stroke-width:2px
-    style instances fill:#f5f5f5,stroke:#666,stroke-width:2px
-    style redis fill:#fff5f5,stroke:#666,stroke-width:2px
-    style RD fill:#ffe8e8,stroke:#666,stroke-width:2px
+subgraph clients["Multiple Clients"]
+C1["Client A - 192.168.1.100"]
+C2["Client B - 192.168.1.101"]
+C3["Client A - 192.168.1.100"]
+end
+subgraph lb["Load Balancer"]
+LB["Distribution Layer"]
+end
+subgraph instances["Service Instances"]
+I1["Instance 1 - Port 8080"]
+I2["Instance 2 - Port 8081"]
+I3["Instance 3 - Port 8082"]
+end
+subgraph redis["Redis - Shared State"]
+RD["Token Buckets"]
+K1["ratelimit:192.168.1.100 | tokens: 95 | last_refill: 1699123456"]
+K2["ratelimit:192.168.1.101 | tokens: 100 | last_refill: 1699123450"]
+end
+RD --- K1 & K2
+C1 --> LB
+C2 --> LB
+C3 --> LB
+LB --> I1 & I2 & I3
+I1 <-- Read/Write --> RD
+I2 <-- Read/Write --> RD
+I3 <-- Read/Write --> RD
+style C1 fill:#3b3b3b,stroke:#555,color:#f2f2f2
+style C2 fill:#3b3b3b,stroke:#555,color:#f2f2f2
+style C3 fill:#3b3b3b,stroke:#555,color:#f2f2f2
+style LB fill:#4b4b4b,stroke:#666,color:#f2f2f2
+style I1 fill:#4b4b4b,stroke:#666,color:#f2f2f2
+style I2 fill:#4b4b4b,stroke:#666,color:#f2f2f2
+style I3 fill:#4b4b4b,stroke:#666,color:#f2f2f2
+style RD fill:#5b5b5b,stroke:#777,color:#f2f2f2
+style K1 fill:#5b5b5b,stroke:#777,color:#f2f2f2
+style K2 fill:#5b5b5b,stroke:#777,color:#f2f2f2
+style clients fill:#2c2c2c,stroke:#444,stroke-width:2px,color:#f2f2f2
+style lb fill:#2c2c2c,stroke:#444,stroke-width:2px,color:#f2f2f2
+style instances fill:#2c2c2c,stroke:#444,stroke-width:2px,color:#f2f2f2
+style redis fill:#2c2c2c,stroke:#444,stroke-width:2px,color:#f2f2f2
+linkStyle 0 stroke:#aaa,stroke-width:2px,color:#aaa,fill:none
+linkStyle 1 stroke:#aaa,stroke-width:2px,color:#aaa,fill:none
+linkStyle 2 stroke:#aaa,stroke-width:2px,color:#aaa,fill:none
+linkStyle 3 stroke:#aaa,stroke-width:2px,color:#aaa,fill:none
+linkStyle 4 stroke:#aaa,stroke-width:2px,color:#aaa,fill:none
+linkStyle 5 stroke:#aaa,stroke-width:2px,color:#aaa,fill:none
 ```
 
 ### How It Works
