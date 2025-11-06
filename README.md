@@ -1,23 +1,81 @@
 # Distributed Rate Limiter
 
-Production-grade distributed rate limiter built with Go and Redis. Implements token bucket algorithm with multiple strategies for microservices and API gateways.
+A distributed rate limiter built with Go and Redis, implementing the token bucket algorithm with multiple strategies for coordinating rate limits across service instances.
 
 [![Go Version](https://img.shields.io/badge/go-1.24.5-blue.svg)](https://golang.org)
+
+## Overview
+
+When running multiple instances of a service, each instance needs to share rate limit state to prevent a single user from bypassing limits by hitting different servers. This project solves that by using Redis as shared storage, with three token bucket implementations that trade off atomicity and performance.
 
 ## Features
 
 - **Distributed State Management**: Redis-backed coordination across multiple service instances
 - **Multiple Token Bucket Implementations**: Hash-based, transaction-based, and Lua script-based strategies
-- **Zero Race Conditions**: Lua implementation provides atomic operations with precise refill calculations
+- **Atomic Operations**: Lua and Redis Transaction strategies eliminate race conditions
 - **Extensible Architecture**: Factory pattern enables pluggable rate limiting strategies
 - **Clean Separation of Concerns**: Interface-based design with dependency injection
-- **Graceful Shutdown**: Proper resource cleanup and connection management
 - **Structured Logging**: Instance-aware logging for distributed debugging
 - **Environment-Driven Configuration**: Validation and type-safe configuration management
 
 ## Architecture
 
-### Clean Architecture Principles
+### Distributed Coordination
+
+```mermaid
+flowchart TB
+    subgraph clients["Multiple Clients"]
+        C1["Client A<br/>192.168.1.100"]
+        C2["Client B<br/>192.168.1.101"]
+        C3["Client A<br/>192.168.1.100"]
+    end
+
+    subgraph lb["Load Balancer"]
+        LB[Distribution Layer]
+    end
+
+    subgraph instances["Service Instances"]
+        I1["Instance 1<br/>Port 8080"]
+        I2["Instance 2<br/>Port 8081"]
+        I3["Instance 3<br/>Port 8082"]
+    end
+
+    subgraph redis["Redis - Shared State"]
+        RD["Token Buckets"]
+        K1["ratelimit:192.168.1.100<br/>tokens: 95, last_refill: 1699123456"]
+        K2["ratelimit:192.168.1.101<br/>tokens: 100, last_refill: 1699123450"]
+
+        RD --- K1
+        RD --- K2
+    end
+
+    C1 --> LB
+    C2 --> LB
+    C3 --> LB
+
+    LB --> I1
+    LB --> I2
+    LB --> I3
+
+    I1 <-->|Read/Write| RD
+    I2 <-->|Read/Write| RD
+    I3 <-->|Read/Write| RD
+
+    style clients fill:#f5f5f5,stroke:#666,stroke-width:2px
+    style lb fill:#e8e8e8,stroke:#666,stroke-width:2px
+    style instances fill:#f5f5f5,stroke:#666,stroke-width:2px
+    style redis fill:#fff5f5,stroke:#666,stroke-width:2px
+    style RD fill:#ffe8e8,stroke:#666,stroke-width:2px
+```
+
+### How It Works
+
+1.  **Request arrives** → Middleware extracts client identifier (IP address)
+2.  **Strategy executes** → Selected implementation (Hash/Transaction/Lua) checks Redis
+3.  **Token bucket logic** → Read current tokens, calculate refill, check availability, update state
+4.  **Decision** → Allow request (200 + headers) or reject (429 rate limited)
+
+### Project Structure
 
 ```
 cmd/server/           # Application entry point
@@ -41,66 +99,76 @@ internal/
 └── http/            # HTTP handlers
 ```
 
-### Design Patterns
+### Implementation Highlights
+
+**Design Patterns**
 
 - **Factory Pattern**: Strategy-based rate limiter instantiation with configuration-driven selection
 - **Dependency Injection**: Constructor injection throughout, enabling testability and loose coupling
 - **Middleware Chain**: Composable HTTP middleware for cross-cutting concerns
 - **Adapter Pattern**: Redis client abstraction isolating external dependencies
 
-### Implementation Highlights
-
 **Idiomatic Go:**
+
 - `internal/` package for encapsulation
 - Error wrapping with context preservation
 - Context-aware operations throughout
 - Proper resource lifecycle management
 
 **Redis Optimization:**
+
 - Connection pooling with configurable parameters
 - Single atomic operation per rate limit check (Lua strategy)
 - Hash-based storage minimizing network round-trips
 
 **Minimal Dependencies:**
+
 - Single external dependency: `github.com/redis/go-redis/v9`
 - Standard library for core functionality
 
-### Rate Limiting Flow
-
-```mermaid
-graph LR
-    A[HTTP Request] --> B[Rate Limit Middleware]
-    B --> C{Extract IP/Key}
-    C --> D[Check Rate Limit]
-    D --> E{Allowed?}
-    E -->|Yes| F[Proceed to Handler]
-    E -->|No| G[Return 429]
-    D --> H[Redis Operations]
-```
-
 ## API Endpoints
 
-### GET /api
-Rate-limited endpoint demonstrating token bucket behavior.
+### Rate-Limited Endpoint
 
-**Response:**
+**Request:**
+
+```bash
+GET /api
+```
+
+**Success Response (200):**
+
 ```json
 {
   "msg": "Successfully Hit",
   "time": "2024-01-01T12:00:00Z",
-  "instanceId": "instance-123"
+  "instanceId": "instance-abc123"
 }
 ```
 
-**Rate Limit Headers:**
+**Rate Limited Response (429):**
+
+```json
+{
+  "error": "Rate limit exceeded"
+}
+```
+
+**Response Headers:**
+
 - `X-RateLimit-Remaining`: Tokens remaining in bucket
 
-**Status Codes:**
-- `200`: Request allowed
-- `429`: Rate limit exceeded
+### Health Check Endpoint
 
-### GET /health
-Health check endpoint for load balancer integration.
+**Request:**
+
+```bash
+GET /health
+```
+
+**Response:**
+
+- `200 OK` - Service and Redis connection healthy
 
 ## Rate Limiting Strategies
 
@@ -108,13 +176,14 @@ Health check endpoint for load balancer integration.
 
 The system provides three Redis-based token bucket implementations with different trade-offs:
 
-| Strategy | Atomicity | Performance 
-|----------|-----------|-------------
-| **Lua Script** | Atomic | Highest 
-| **Transaction** | Atomic | Medium 
-| **Hash-based** | Non-atomic | High 
+| Strategy        | Atomicity  | Performance |
+| --------------- | ---------- | ----------- |
+| **Lua Script**  | Atomic     | Highest     |
+| **Transaction** | Atomic     | Medium      |
+| **Hash-based**  | Non-atomic | High        |
 
 **Lua Script Strategy (Recommended):**
+
 - Single atomic Redis operation
 - Zero race conditions
 - Precise refill calculations
@@ -122,93 +191,60 @@ The system provides three Redis-based token bucket implementations with differen
 
 See [Token Bucket Implementation Details](internal/ratelimiter/redis/tokenbucket/README.md) for comprehensive comparison.
 
-### IP Extraction
-
-Client identification with fallback chain:
-1. `X-Forwarded-For` header (first IP in chain)
-2. `RemoteAddr` fallback
-3. IPv4/IPv6 support
-
 ## Configuration
 
 Environment-based configuration with validation:
 
 ```bash
 # Server
-PORT
+PORT=8080
 
 # Redis
-REDIS_ADDR # host:port
-REDIS_PASSWORD
-REDIS_DB
-REDIS_POOL_SIZE
+REDIS_ADDR=localhost:6379
+REDIS_PASSWORD=
+REDIS_DB=0
+REDIS_POOL_SIZE=10
 
 # Rate Limiting
-LIMITER_STRATEGY  # Options: tokenbucket-hash, tokenbucket-transaction, tokenbucket-lua
-LIMITER_CAPACITY
-LIMITER_REFILL_RATE
+LIMITER_STRATEGY=tokenbucket-lua  # tokenbucket-lua | tokenbucket-transaction | tokenbucket-hash
+LIMITER_CAPACITY=100              # Max tokens in bucket
+LIMITER_REFILL_RATE=10            # Tokens added per second
 ```
 
-**Strategy Selection:** 
-***Token Bucket***
-- `lua`: Atomic, highest performance
-- `transaction`: Atomic with Redis WATCH/MULTI/EXEC
-- `hash`: Development only (has race conditions)
+**Strategy Selection:**
+
+- `tokenbucket-lua`: Atomic, highest performance (recommended)
+- `tokenbucket-transaction`: Atomic with WATCH/MULTI/EXEC
+- `tokenbucket-hash`: Non-atomic (development only)
 
 The system is designed for easy extension with new rate limiting strategies
-## Performance
 
-**Target Metrics:**
-- Sub-millisecond average latency
-- 99th percentile < 5ms
-- 10k+ requests/second per instance
+## Running
 
-**Lua Strategy Performance:**
-- Single atomic Redis operation per check
-- Minimal network overhead
-- Zero race conditions
-- Precise token refill calculations
+### Local Development
 
-## Deployment
-
-**Docker Compose:**
 ```bash
-docker-compose up --build --scale 'go=x'
-```
-- x : number of instances
+# Start Redis
+docker run -d -p 6379:6379 redis:alpine
 
-**Kubernetes Considerations:**
-- Horizontal scaling supported via Redis coordination
-- Health check endpoint at `/health`
-- Graceful shutdown with SIGTERM handling
-- Environment-based configuration for 12-factor compliance
+# Run single instance
+go run cmd/server/main.go
+```
+
+### Multiple Instances with Docker Compose
+
+```bash
+# Start 3 instances + Redis
+docker-compose up --build --scale go=3
+```
 
 ## Future Enhancements
 
-### Observability
-- **Prometheus Metrics**: Request rates, rate limit hits/misses, Redis latency, token bucket state
-- **Distributed Tracing**: OpenTelemetry integration for request flow visualization
-- **Structured Logging**: Enhanced context with trace IDs and correlation
-
-### Resilience
-- **Circuit Breaker**: Redis failure detection with fallback strategies (fail-open/fail-closed)
-- **Retry Logic**: Exponential backoff for transient Redis failures
-- **Health Checks**: Redis connectivity monitoring with automatic reconnection
-
-### Testing
-- **Unit Tests**: Coverage for all rate limiting strategies
-- **Integration Tests**: Redis interaction verification
-- **Load Tests**: Performance benchmarking and race condition validation
-- **Chaos Engineering**: Redis failure scenario testing
-
-### Additional Features
-- **Rate Limit Headers**: `X-RateLimit-Limit`, `X-RateLimit-Reset` for client awareness
-- **Custom Error Types**: Structured error codes for improved debugging
-- **Hot Configuration Reload**: Dynamic rate limit adjustment without restart
-- **Multiple Rate Limit Tiers**: User-based, IP-based, and endpoint-specific limits
-
+- **Observability**: Prometheus metrics, OpenTelemetry tracing, structured logging with trace IDs
+- **Resilience**: Circuit breaker for Redis failures, retry logic with exponential backoff
+- **Testing**: Unit, integration, and load tests with race condition validation
+- **Enhanced Features**: Additional rate limit headers (`X-RateLimit-Reset`), hot config reload, multi-tier limits (user/IP/endpoint-based)
 
 ---
 
-**Built with ❤️ and Go best practices**
-
+**Built to understand how services like API gateways and microservices handle rate limiting at scale.**
