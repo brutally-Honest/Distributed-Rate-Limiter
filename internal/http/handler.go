@@ -17,9 +17,3 @@ func New(cfg *config.Config, startTime time.Time) *Handlers {
 		startTime: startTime,
 	}
 }
-
-type Resp struct {
-	Msg        string    `json:"msg"`
-	Time       time.Time `json:"time"`
-	InstanceId string    `json:"instance_id"`
-}

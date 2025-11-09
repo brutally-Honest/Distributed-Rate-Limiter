@@ -132,9 +132,7 @@ internal/
 
 ## API Endpoints
 
-### Rate-Limited Endpoint
-
-**Request:**
+### 1. Rate-Limit Endpoint
 
 ```bash
 GET /api
@@ -145,8 +143,8 @@ GET /api
 ```json
 {
   "msg": "Successfully Hit",
-  "time": "2024-01-01T12:00:00Z",
-  "instanceId": "instance-abc123"
+  "time": "2025-11-09T11:37:54+05:30",
+  "instanceId": "46950-059eff"
 }
 ```
 
@@ -162,17 +160,42 @@ GET /api
 
 - `X-RateLimit-Remaining`: Tokens remaining in bucket
 
-### Health Check Endpoint
-
-**Request:**
+### 2. Health Check Endpoint
 
 ```bash
 GET /health
 ```
 
-**Response:**
-
-- `200 OK` - Service and Redis connection healthy
+**Success Response (200):**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-11-09T11:37:54+05:30",
+  "uptime": "44.398377667s",
+  "instanceId": "46950-059eff",
+  "services": {
+    "redis": {
+      "status": "connected",
+      "latency": "1.2ms"
+    }
+  }
+}
+```
+**Failed Response (503):**
+```json
+{
+  "status": "unhealthy",
+  "timestamp": "2025-11-09T11:37:54+05:30", 
+  "uptime": "44.398377667s",
+  "instanceId": "46950-059eff",
+  "services": {
+    "redis": {
+      "status": "disconnected",
+      "latency": ""
+    }
+  }
+}
+```
 
 ## Rate Limiting Strategies
 
