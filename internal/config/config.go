@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type ServerConfig struct {
@@ -21,10 +23,15 @@ type RedisConfig struct {
 	PoolSize int
 }
 
+type Redis struct {
+	Config RedisConfig
+	Client *redis.Client
+}
+
 type Config struct {
 	Server  ServerConfig
 	Limiter LimiterConfig
-	Redis   RedisConfig
+	Redis   Redis
 }
 
 func Load() (*Config, error) {
@@ -49,11 +56,13 @@ func Load() (*Config, error) {
 			Strategy:       strategy,
 			StrategyConfig: strategyConfig,
 		},
-		Redis: RedisConfig{
-			Addr:     getEnvString("REDIS_ADDR", "localhost:6379"),
-			Password: getEnvString("REDIS_PASSWORD", ""),
-			DB:       getEnvInt("REDIS_DB", 0),
-			PoolSize: getEnvInt("REDIS_POOL_SIZE", 20),
+		Redis: Redis{
+			Config: RedisConfig{
+				Addr:     getEnvString("REDIS_ADDR", "localhost:6379"),
+				Password: getEnvString("REDIS_PASSWORD", ""),
+				DB:       getEnvInt("REDIS_DB", 0),
+				PoolSize: getEnvInt("REDIS_POOL_SIZE", 20),
+			},
 		},
 	}
 
@@ -72,16 +81,13 @@ func (cfg *Config) Validate() error {
 		return fmt.Errorf("instanceId cannot be empty")
 	}
 
-	if cfg.Redis.Addr == "" {
+	if cfg.Redis.Config.Addr == "" {
 		return fmt.Errorf("redis address cannot be empty")
 	}
-	if cfg.Redis.Password == "" {
-		return fmt.Errorf("redis password cannot be empty")
-	}
-	if cfg.Redis.DB < 0 {
+	if cfg.Redis.Config.DB < 0 {
 		return fmt.Errorf("redis database cannot be negative")
 	}
-	if cfg.Redis.PoolSize <= 0 {
+	if cfg.Redis.Config.PoolSize <= 0 {
 		return fmt.Errorf("redis pool size must be positive")
 	}
 

@@ -17,16 +17,13 @@ type Server struct {
 	httpServer  *http.Server
 	config      *config.Config
 	redisClient *redis.RedisClient
+	startTime   time.Time
 }
 
 func New(cfg *config.Config) (*Server, error) {
 
-	redisClient, err := redis.New(
-		cfg.Redis.Addr,
-		cfg.Redis.Password,
-		cfg.Redis.DB,
-		cfg.Redis.PoolSize,
-	)
+	startTime := time.Now()
+	redisClient, err := redis.New(cfg.Redis.Config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Redis client: %w", err)
 	}
@@ -42,7 +39,7 @@ func New(cfg *config.Config) (*Server, error) {
 	}
 
 	limiterMiddleware := middlewares.NewRateLimiterMiddleware(limiter)
-	router := SetUpRoutes(cfg, limiterMiddleware)
+	router := SetUpRoutes(cfg, limiterMiddleware, startTime)
 
 	handlersWithMiddleware := middlewares.Chain(
 		middlewares.Logger(),
@@ -55,6 +52,7 @@ func New(cfg *config.Config) (*Server, error) {
 			Addr:    ":" + cfg.Server.Port,
 			Handler: handlersWithMiddleware,
 		},
+		startTime: startTime,
 	}
 
 	return s, nil

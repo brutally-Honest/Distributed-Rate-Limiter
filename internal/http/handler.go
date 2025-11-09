@@ -7,12 +7,14 @@ import (
 )
 
 type Handlers struct {
-	cfg *config.Config
+	cfg       *config.Config
+	startTime time.Time
 }
 
-func New(cfg *config.Config) *Handlers {
+func New(cfg *config.Config, startTime time.Time) *Handlers {
 	return &Handlers{
-		cfg: cfg,
+		cfg:       cfg,
+		startTime: startTime,
 	}
 }
 

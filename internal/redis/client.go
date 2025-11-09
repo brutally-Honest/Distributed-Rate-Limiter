@@ -5,33 +5,37 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/brutally-Honest/distributed-rate-limiter/internal/config"
 	"github.com/redis/go-redis/v9"
 )
 
 type RedisClient struct {
-	client *redis.Client
+	Client *redis.Client
+	Config config.RedisConfig
 }
 
-func New(addr, password string, db, poolSize int) (*RedisClient, error) {
+func New(redisConfig config.RedisConfig) (*RedisClient, error) {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: password,
-		DB:       db,
-		PoolSize: poolSize,
+		Addr:     redisConfig.Addr,
+		Password: redisConfig.Password,
+		DB:       redisConfig.DB,
+		PoolSize: redisConfig.PoolSize,
 	})
 
-	// Test connection
 	if err := rdb.Ping(context.Background()).Err(); err != nil {
 		return nil, fmt.Errorf("redis connection failed: %w", err)
 	}
 	log.Println("Redis client created successfully")
-	return &RedisClient{client: rdb}, nil
+	return &RedisClient{
+		Client: rdb,
+		Config: redisConfig,
+	}, nil
 }
 
 func (r *RedisClient) GetClient() *redis.Client {
-	return r.client
+	return r.Client
 }
 
 func (r *RedisClient) Close() error {
-	return r.client.Close()
+	return r.Client.Close()
 }
