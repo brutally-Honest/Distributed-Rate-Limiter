@@ -9,8 +9,9 @@ services:
       context: .
     environment:
       - PORT=1783
-      - LIMITER_CAPACITY=20
-      - LIMITER_REFILL_RATE=5
+      - LIMITER_CAPACITY=50
+      - LIMITER_REFILL_RATE=10
+      - LIMITER_STRATEGY=tokenbucket-hash
       - REDIS_ADDR=redis:6379
       - REDIS_PASSWORD=""
       - REDIS_DB=0
