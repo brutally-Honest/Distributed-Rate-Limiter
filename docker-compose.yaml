@@ -11,7 +11,7 @@ services:
       - PORT=1783
       - LIMITER_CAPACITY=50
       - LIMITER_REFILL_RATE=10
-      - LIMITER_STRATEGY=tokenbucket-hash
+      - LIMITER_STRATEGY=tokenbucket-lua
       - REDIS_ADDR=redis:6379
       - REDIS_PASSWORD=""
       - REDIS_DB=0

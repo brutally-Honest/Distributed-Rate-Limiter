@@ -4,7 +4,7 @@ A distributed rate limiter built with Go and Redis, implementing the token bucke
 
 [![Go Version](https://img.shields.io/badge/go-1.24.5-blue.svg)](https://golang.org)
 
-# Quick Start
+## Quick Start
 ```bash
 git clone https://github.com/brutally-Honest/distributed-rate-limiter.git
 cd distributed-rate-limiter
