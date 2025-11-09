@@ -232,6 +232,17 @@ The system is designed for easy extension with new rate limiting strategies
 docker run -d -p 6379:6379 redis:alpine
 
 # Run single instance
+export PORT=1783
+
+# Desired Redis configuration
+export REDIS_ADDR=localhost:6379
+export REDIS_PASSWORD=" "
+
+# Desired strategy configuration 
+export LIMITER_STRATEGY=tokenbucket-lua  
+export LIMITER_CAPACITY=50               
+export LIMITER_REFILL_RATE=10
+
 go run cmd/server/main.go
 ```
 
@@ -242,13 +253,11 @@ go run cmd/server/main.go
 docker-compose up --build --scale go=3
 ```
 
+See [Load Test Observation Details](tests/load/README.md) for comprehensive testing results.
+
 ## Future Enhancements
 
 - **Observability**: Prometheus metrics, OpenTelemetry tracing, structured logging with trace IDs
 - **Resilience**: Circuit breaker for Redis failures, retry logic with exponential backoff
-- **Testing**: Unit, integration, and load tests with race condition validation
+- **Testing**: Unit, integration tests with race condition validation
 - **Enhanced Features**: Additional rate limit headers (`X-RateLimit-Reset`), hot config reload, multi-tier limits (user/IP/endpoint-based)
-
----
-
-**Built to understand how services like API gateways and microservices handle rate limiting at scale.**
