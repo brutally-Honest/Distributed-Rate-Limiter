@@ -4,6 +4,14 @@ A distributed rate limiter built with Go and Redis, implementing the token bucke
 
 [![Go Version](https://img.shields.io/badge/go-1.24.5-blue.svg)](https://golang.org)
 
+# Quick Start
+```bash
+git clone https://github.com/brutally-Honest/distributed-rate-limiter.git
+cd distributed-rate-limiter
+docker-compose up --build --scale 'go=3' # Tune based on requirements 
+curl -v http://localhost/api
+```
+
 ## Overview
 
 When running multiple instances of a service, each instance needs to share rate limit state to prevent a single user from bypassing limits by hitting different servers. This project solves that by using Redis as shared storage, with three token bucket implementations that trade off atomicity and performance.
